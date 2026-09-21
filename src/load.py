@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 
-def load_cash(path):    
-    raw = pd.read_excel(path, sheet_name='CORN', header=None)
+def load_cash(cash_path):    
+    raw = pd.read_excel(cash_path, sheet_name='CORN', header=None)
     my_slice = raw.iloc[8:, [0, 7, 17, 21]] #grabs the columns we want (date, kansas city, dodge city, garden city)
 
     renamed_slice = my_slice.rename(columns={0: 'date', 7: 'kansas_city', 17: 'dodge_city', 21: 'garden_city'}) #renames the columns for ease of use
@@ -32,8 +32,8 @@ def load_cash(path):
 
 
 
-def load_futures(path):
-    raw = pd.read_excel(path, sheet_name = "B", header = None)
+def load_futures(futures_path):
+    raw = pd.read_excel(futures_path, sheet_name = "B", header = None)
     my_slice = raw.iloc[4:, [0, 2, 3, 4, 5, 7, 8] ]
     renamed_slice = my_slice.rename(columns={0: 'date', 2: 'mar', 3: 'may', 4: 'jul', 5: 'sep', 7: 'dec', 8: 'nearby' }) 
     renamed_slice['date'] = pd.to_datetime(renamed_slice['date'], errors='coerce') #converts the date columns to datetime format and coercing errors
@@ -54,15 +54,17 @@ def load_futures(path):
 
     return load_future_filtered
 
-
-if __name__ == "__main__":
-    cash = load_cash("data/raw/Grainpr_working.xlsx")
-    futures = load_futures("data/raw/cornfutures_working.xlsx")
+def load_merged(cash_path, futures_path):
+    cash = load_cash(cash_path)
+    futures = load_futures(futures_path)
     merged = cash.merge(futures, on=["iso_year", "iso_week"],
-                        how="inner", validate="one_to_one")
+            how="inner", validate="one_to_one")
     merged = merged.rename(columns={"date_x": "cash_date", "date_y": "futures_date"})
     assert (merged["futures_date"] - merged["cash_date"]).dt.days.isin([1]).all()
     assert len(merged) == 1925, f"Expected 1925 merged rows, got {len(merged)}"
     print(merged.head())
     print(merged.tail())
     print(merged.isna().sum())
+    return merged
+
+load_merged('data/raw/Grainpr.xlsx', 'data/raw/cornfutures.xlsx')
