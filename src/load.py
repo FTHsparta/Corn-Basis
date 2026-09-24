@@ -62,9 +62,5 @@ def load_merged(cash_path, futures_path):
     merged = merged.rename(columns={"date_x": "cash_date", "date_y": "futures_date"})
     assert (merged["futures_date"] - merged["cash_date"]).dt.days.isin([1]).all()
     assert len(merged) == 1925, f"Expected 1925 merged rows, got {len(merged)}"
-    print(merged.head())
-    print(merged.tail())
-    print(merged.isna().sum())
     return merged
 
-load_merged('data/raw/Grainpr.xlsx', 'data/raw/cornfutures.xlsx')
