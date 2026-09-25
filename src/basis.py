@@ -1,4 +1,5 @@
 import pandas as pd
+from pathlib import Path
 
 from load import load_merged
 
@@ -40,6 +41,32 @@ def missing_observations(df):
         df[f"{market}_missing"] = df[market].isna() 
     return df
 
+def export_excel(df, path):
+    Path("output").mkdir(exist_ok = True)
+    columns = (["cash_date", "futures_date"] + MARKET +["nearby"] + [f"{market}_basis" for market in MARKET] + [f"{market}_basis_pct" for market in MARKET] + [f"{market}_missing" for market in MARKET])
+    data = df[columns].copy()
+    date_cols = ["cash_date", "futures_date"]
+
+    for col in date_cols:
+        data[col] = data[col].dt.date
+
+    gaps = []
+    for market in MARKET:
+        rows = df.loc[df[f"{market}_missing"], ["cash_date"]].copy()
+        rows["market"] = market
+        gaps.append(rows)
+    missing = pd.concat(gaps)
+
+    missing["cash_date"] = missing["cash_date"].dt.date
+    missing = missing.reset_index(drop = True)
+
+
+    with pd.ExcelWriter(path) as writer:
+        data.to_excel(writer, sheet_name="data", index=False)
+        missing.to_excel(writer, sheet_name="missing", index=False)
+
+
+
 
 if __name__ == "__main__":
     merged = load_merged("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
@@ -72,3 +99,8 @@ if __name__ == "__main__":
     print("\n=== basis ===")
     print(filtered[basis_cols].head())
     print(filtered[basis_cols].tail())
+
+    stamp = pd.Timestamp.today().strftime("%Y%m%d")
+    path = f"output/corn_basis_2005_{stamp}.xlsx"
+
+    export_excel(filtered, path)
