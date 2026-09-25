@@ -28,10 +28,17 @@ def filter_sample(df, start = SAMPLE_START):
     before = len(study_sample) #counts length of study sample before trimming
     dropped = before - len(trimmed) #subtracts the length before with the trimmed to get the number of dropped rows
 
+    
+
     assert trimmed["nearby"].isna().sum() == 0, f"Missing value in nearby columns" #makes sure that trimmed sample has no missing nearby values
     assert dropped == 2, f"Expected 2 rows with missing nearby values but got {dropped}" #makes sure that correct number of rows were dropped
 
     return trimmed.reset_index(drop=True) #resets the index of the trimmed study sample
+
+def missing_observations(df):
+    for market in MARKET:
+        df[f"{market}_missing"] = df[market].isna() 
+    return df
 
 
 if __name__ == "__main__":
@@ -46,6 +53,12 @@ if __name__ == "__main__":
 
     df = add_basis(merged)
     filtered = filter_sample(df)
+
+    filtered = missing_observations(filtered)
+    for market in MARKET:
+        print(f"\n{market} missing:")
+        print(filtered.loc[filtered[f"{market}_missing"], "cash_date"])
+        
     print("\n=== filtered ===")
     print(filtered.isna().sum())
 
