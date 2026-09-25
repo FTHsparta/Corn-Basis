@@ -3,6 +3,7 @@ import pandas as pd
 from load import load_merged
 
 MARKET = ["kansas_city", "dodge_city", "garden_city"]
+SAMPLE_START = "2005-01-01"
 
 def add_basis(df):
     for market in MARKET:
@@ -20,6 +21,19 @@ def add_basis(df):
 
     return df
 
+def filter_sample(df, start = SAMPLE_START):
+    study_sample = df[df["cash_date"] >= start] #creates the study sample using the start date (No data values before Jan 1st, 2005)
+    trimmed = study_sample.dropna(subset = ["nearby"]) #deletes the rows missing nearby values
+
+    before = len(study_sample) #counts length of study sample before trimming
+    dropped = before - len(trimmed) #subtracts the length before with the trimmed to get the number of dropped rows
+
+    assert trimmed["nearby"].isna().sum() == 0, f"Missing value in nearby columns" #makes sure that trimmed sample has no missing nearby values
+    assert dropped == 2, f"Expected 2 rows with missing nearby values but got {dropped}" #makes sure that correct number of rows were dropped
+
+    return trimmed.reset_index(drop=True) #resets the index of the trimmed study sample
+
+
 if __name__ == "__main__":
     merged = load_merged("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
 
@@ -31,6 +45,10 @@ if __name__ == "__main__":
     print(merged.isna().sum())
 
     df = add_basis(merged)
+    filtered = filter_sample(df)
+    print("\n=== filtered ===")
+    print(filtered.isna().sum())
+
 
     basis_cols = (
         ["cash_date", "nearby"]
@@ -39,5 +57,5 @@ if __name__ == "__main__":
     )
 
     print("\n=== basis ===")
-    print(df[basis_cols].head())
-    print(df[basis_cols].tail())
+    print(filtered[basis_cols].head())
+    print(filtered[basis_cols].tail())
