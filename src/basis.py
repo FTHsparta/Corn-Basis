@@ -3,6 +3,7 @@ from pathlib import Path
 
 from load import load_merged
 
+
 MARKET = ["kansas_city", "dodge_city", "garden_city"]
 SAMPLE_START = "2005-01-01"
 
@@ -65,6 +66,10 @@ def export_excel(df, path):
         data.to_excel(writer, sheet_name="data", index=False)
         missing.to_excel(writer, sheet_name="missing", index=False)
 
+def interpolate_missing(df):
+    for market in MARKET:
+        df[market] = df[market].interpolate()
+    return df
 
 
 
