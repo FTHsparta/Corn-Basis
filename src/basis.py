@@ -67,8 +67,51 @@ def export_excel(df, path):
         missing.to_excel(writer, sheet_name="missing", index=False)
 
 def interpolate_missing(df):
+    df = df.copy()
+    df = df.sort_values("cash_date").reset_index(drop=True)
+    cash_copy = df[MARKET].copy()
+
     for market in MARKET:
-        df[market] = df[market].interpolate()
+       filled = df[f"{market}"].interpolate(method = "linear")
+       not_missing = ~df[f"{market}_missing"]
+
+       assert filled.isna().sum() == 0, f"There are missing values after interpolation"
+       assert (filled[not_missing] == cash_copy[market][not_missing]).all(), f"{market}: a real week changed"
+
+
+       df[market] = filled
+    df = add_basis(df)
+
+    row = df["cash_date"] == "2006-06-15"
+    row1 = df["cash_date"] == "2006-06-08"
+    row2 = df["cash_date"] == "2006-06-22"
+
+    garden_city_before = df.loc[row1, "garden_city"].iloc[0]
+    garden_city_after = df.loc[row2, "garden_city"].iloc[0]
+
+    expected_value = ((garden_city_after + garden_city_before)/2)
+
+    assert abs(df.loc[row, "garden_city"].iloc[0] - expected_value) < 1e-3, f"Garden City 6/15/2006 is not the average of 6/8 and 6/22"
+
+    last_real = df["cash_date"] == "2013-09-26"
+    first_filled = df["cash_date"] == "2013-10-03"
+    second_filled = df["cash_date"] == "2013-10-10"
+    second_real = df["cash_date"] == "2013-10-17"
+
+    kc_last_real = df.loc[last_real, "kansas_city"].iloc[0]
+    kc_first_filled = df.loc[first_filled, "kansas_city"].iloc[0]
+    kc_second_filled = df.loc[second_filled, "kansas_city"].iloc[0]
+    kc_second_real = df.loc[second_real, "kansas_city"].iloc[0]
+
+    jump1 = kc_first_filled - kc_last_real
+    jump2 = kc_second_filled - kc_first_filled
+    jump3 = kc_second_real - kc_second_filled
+
+    assert abs(jump1 - jump2) < 1e-6, f"The jump from 9/26/13 to 10/3/13 does not equal the jump from 10/3/13 to 10/10/13"
+    assert abs(jump2 - jump3) < 1e-6, f"The jump from 10/03/13 to 10/10/13 does not equal the jump from 10/10/13 to 10/17/13"
+
+
+
     return df
 
 
@@ -94,6 +137,12 @@ if __name__ == "__main__":
     print("\n=== filtered ===")
     print(filtered.isna().sum())
 
+    interpolated = interpolate_missing(filtered)
+    check_dates = pd.to_datetime(["2006-06-08", "2006-06-15", "2006-06-22", "2013-09-26", "2013-10-03", "2013-10-10", "2013-10-17"])
+    check_cols = ["cash_date"] + MARKET + [f"{market}_missing" for market in MARKET]
+
+    print("\n=== interpolation check ===")
+    print(interpolated.loc[interpolated["cash_date"].isin(check_dates), check_cols])
 
     basis_cols = (
         ["cash_date", "nearby"]
@@ -102,10 +151,10 @@ if __name__ == "__main__":
     )
 
     print("\n=== basis ===")
-    print(filtered[basis_cols].head())
-    print(filtered[basis_cols].tail())
+    print(interpolated[basis_cols].head())
+    print(interpolated[basis_cols].tail())
 
     stamp = pd.Timestamp.today().strftime("%Y%m%d")
     path = f"output/corn_basis_2005_{stamp}.xlsx"
 
-    export_excel(filtered, path)
+    export_excel(interpolated, path)
