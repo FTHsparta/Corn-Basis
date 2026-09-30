@@ -125,33 +125,25 @@ def build_dataset(cash_path, futures_path):
     assert interpolated["cash_date"].iloc[0] == pd.Timestamp("2005-01-06"), f"First date does not match expected value"
     assert interpolated["cash_date"].iloc[-1] == pd.Timestamp("2026-09-03"), f"last date does not match expected value"
     basis_columns = ([f"{market}_basis" for market in MARKET] + [f"{market}_basis_pct" for market in MARKET])
-    assert interpolated[basis_columns].isna().sum().sum() == 0
-    
+    assert interpolated[basis_columns].isna().sum().sum() == 0, f"There are still missing values after interpolating"
+    missing_columns = ([f"{market}_missing" for market in MARKET])
+    assert interpolated[missing_columns].sum().sum() == 12, f"Expected 12 flagged weeks"
+
+    return interpolated
 
 
 
 if __name__ == "__main__":
-    merged = load_merged("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
+    interpolated = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
 
-    merged_cols = ["cash_date", "futures_date"] + MARKET + ["nearby"]
-    print("=== merged ===")
-    print(merged[merged_cols].head())
-    print(merged[merged_cols].tail())
-    print("\n=== missing values ===")
-    print(merged.isna().sum())
-
-    df = add_basis(merged)
-    filtered = filter_sample(df)
-
-    filtered = missing_observations(filtered)
+    
     for market in MARKET:
         print(f"\n{market} missing:")
-        print(filtered.loc[filtered[f"{market}_missing"], "cash_date"])
+        print(interpolated.loc[interpolated[f"{market}_missing"], "cash_date"])
         
-    print("\n=== filtered ===")
-    print(filtered.isna().sum())
 
-    interpolated = interpolate_missing(filtered)
+
+    
     check_dates = pd.to_datetime(["2006-06-08", "2006-06-15", "2006-06-22", "2013-09-26", "2013-10-03", "2013-10-10", "2013-10-17"])
     check_cols = ["cash_date"] + MARKET + [f"{market}_missing" for market in MARKET]
 
