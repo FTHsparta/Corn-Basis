@@ -114,6 +114,20 @@ def interpolate_missing(df):
 
     return df
 
+def build_dataset(cash_path, futures_path):
+    merged = load_merged(cash_path, futures_path)
+    df = add_basis(merged)
+    filtered = filter_sample(df)
+    filtered = missing_observations(filtered)
+    interpolated = interpolate_missing(filtered)
+
+    assert len(interpolated) == 1131, f"Number of rows does not equal 1131 in interpolated data"
+    assert interpolated["cash_date"].iloc[0] == pd.Timestamp("2005-01-06"), f"First date does not match expected value"
+    assert interpolated["cash_date"].iloc[-1] == pd.Timestamp("2026-09-03"), f"last date does not match expected value"
+    basis_columns = ([f"{market}_basis" for market in MARKET] + [f"{market}_basis_pct" for market in MARKET])
+    assert interpolated[basis_columns].isna().sum().sum() == 0
+    
+
 
 
 if __name__ == "__main__":
