@@ -12,7 +12,17 @@ def rolling_forecast(grid):
     return forecast
 
 def forecast_error(grid, forecast):
-    
+    error = (forecast - grid).loc[2009:]
+    return error
+
+def summary(error):
+    error = error.stack().dropna()
+    mean_error = error.mean()
+    mae = error.abs().mean()
+    rmse = (error ** 2).mean() ** 0.5
+    n = len(error)
+
+    return n, mean_error, mae, rmse
 
 
 
@@ -27,3 +37,11 @@ if __name__ == "__main__":
     print(forecast.shape)
     print(forecast.loc[2024:2026, 35:37])
     print(forecast[53].notna().sum())
+
+    error = forecast_error(grid, forecast)
+    print(error.loc[2024:2026, 35:37])
+
+    n, me, mae, rmse = summary(error)
+    print(n, me, mae, rmse)
+
+    error.to_excel("error_kc_pct.xlsx")
