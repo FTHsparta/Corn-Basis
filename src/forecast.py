@@ -1,4 +1,8 @@
 from basis import build_dataset
+import numpy as np
+import pandas as pd
+
+SERIES = ["kansas_city_basis", "dodge_city_basis", "garden_city_basis", "kansas_city_basis_pct", "dodge_city_basis_pct","garden_city_basis_pct"]
 
 def make_grid(df, col): #creates a dataset named grid that has one row per isoyear and one column per isoweek
     df = df.copy()
@@ -24,8 +28,15 @@ def summary(error):
 
     return n, mean_error, mae, rmse
 
-
-
+def evaluate_all(df):
+    results = []
+    for col in SERIES:
+        grid = make_grid(df, col)
+        forecast = rolling_forecast(grid)
+        error = forecast_error(grid, forecast)
+        n, me, mae, rmse = summary(error)
+        results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
+    return pd.DataFrame(results)
 
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
@@ -43,5 +54,7 @@ if __name__ == "__main__":
 
     n, me, mae, rmse = summary(error)
     print(n, me, mae, rmse)
+
+    print(evaluate_all(df))
 
     error.to_excel("error_kc_pct.xlsx")
