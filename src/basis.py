@@ -9,15 +9,15 @@ SAMPLE_START = "2005-01-01"
 
 def add_basis(df):
     for market in MARKET:
-        df[f"{market}_basis"] = df[market] - df["nearby"]
-        df[f"{market}_basis_pct"] = df[f"{market}_basis"] / df["nearby"] * 100
+        df[f"{market}_basis"] = (df[market] - df["nearby"]) * 100 #calculates basis in cents
+        df[f"{market}_basis_pct"] = (df[market] - df["nearby"]) / df["nearby"] * 100 #calculates percentage basis
         assert df[f"{market}_basis"].count() == (df[market].notna() & df["nearby"].notna()).sum(), f"basis count does not match null nearby values for {market}"
         
     row = df["cash_date"] == "2026-09-03"
     kc_basis = df.loc[row, "kansas_city_basis"].iloc[0]
     kc_basis_pct = df.loc[row, "kansas_city_basis_pct"].iloc[0]
 
-    assert abs(kc_basis - 0.03125) < 1e-6, f"Expected KC basis 0.03125 on 2026-09-03, got {kc_basis}"
+    assert abs(kc_basis - 3.125) < 1e-6, f"Expected KC basis 3.125 on 2026-09-03, got {kc_basis}"
     assert abs(kc_basis_pct - 0.6037) < 1e-3, f"Expected KC basis pct 0.6037 on 2026-09-03, got {kc_basis_pct}"
 
 
