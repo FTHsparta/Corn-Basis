@@ -10,8 +10,8 @@ def make_grid(df, col): #creates a dataset named grid that has one row per isoye
     grid = df.pivot(index = "iso_year", columns = "iso_week", values = col)
     return grid
 
-def rolling_forecast(grid):
-    forecast = grid.shift(1).rolling(3).mean()
+def rolling_forecast(grid, years = 3):
+    forecast = grid.shift(1).rolling(years).mean()
     forecast = forecast.loc[2009:]
     return forecast
 
@@ -28,11 +28,11 @@ def summary(error):
 
     return n, mean_error, mae, rmse
 
-def evaluate_all(df):
+def evaluate_all(df, years = 3):
     results = []
     for col in SERIES:
         grid = make_grid(df, col)
-        forecast = rolling_forecast(grid)
+        forecast = rolling_forecast(grid, years)
         error = forecast_error(grid, forecast)
         n, me, mae, rmse = summary(error)
         results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
@@ -55,6 +55,10 @@ if __name__ == "__main__":
     n, me, mae, rmse = summary(error)
     print(n, me, mae, rmse)
 
-    print(evaluate_all(df))
+    print(evaluate_all(df, 3))
+    print(evaluate_all(df, 4))
+
+    forecast4 = rolling_forecast(grid, 4)
+    print(grid.loc[2022:2025, 36], forecast4.loc[2026,36])
 
     error.to_excel("error_kc_pct.xlsx")
