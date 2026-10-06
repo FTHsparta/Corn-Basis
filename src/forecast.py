@@ -27,6 +27,14 @@ def summary(error):
     n = len(error)
 
     return n, mean_error, mae, rmse
+def weekly_detail(df, col):
+    grid = make_grid(df, col)
+    forecast = rolling_forecast(grid)
+    error = forecast_error(grid, forecast)
+    dates = make_grid(df, "cash_date")
+    detail = pd.DataFrame({"date": dates.stack(), "observed": grid.stack(), "forecast": forecast.stack(), "error": error.stack()})
+    detail = detail.dropna(subset=["date"])
+    return detail.loc[2009:]
 
 def evaluate_all(df):
     results = []
@@ -37,6 +45,21 @@ def evaluate_all(df):
         n, me, mae, rmse = summary(error)
         results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
     return pd.DataFrame(results)
+
+def week_all(df):
+    tables = []
+    for col in SERIES:
+        table = weekly_detail(df, col).drop(columns = "date").add_prefix(col + "_")
+        tables.append(table)
+    dates = weekly_detail(df, SERIES[0])[["date"]]
+    return pd.concat([dates] + tables, axis = 1)
+
+def export_results(df, path):
+    summary_sheet = evaluate_all(df)
+    weekly_sheet = week_all(df)
+    with pd.ExcelWriter(path) as writer:
+        summary_sheet.to_excel(writer, sheet_name = "summary", index = False)
+        weekly_sheet.to_excel(writer, sheet_name = "weekly")
 
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
@@ -57,4 +80,13 @@ if __name__ == "__main__":
 
     print(evaluate_all(df))
 
+    wd = weekly_detail(df, "kansas_city_basis_pct")
+    print(wd.shape)
+    print(wd.loc[(2026, 36)])
+
+    wa = week_all(df)
+    print(wa.shape)
+    print(wa.columns.tolist())
+
     error.to_excel("error_kc_pct.xlsx")
+    export_results(df, "corn_basis_forecast_3yr_20261001.xlsx")
