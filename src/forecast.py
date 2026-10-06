@@ -27,9 +27,9 @@ def summary(error):
     n = len(error)
 
     return n, mean_error, mae, rmse
-def weekly_detail(df, col):
+def weekly_detail(df, col, years = 3):
     grid = make_grid(df, col)
-    forecast = rolling_forecast(grid)
+    forecast = rolling_forecast(grid, years)
     error = forecast_error(grid, forecast)
     dates = make_grid(df, "cash_date")
     detail = pd.DataFrame({"date": dates.stack(), "observed": grid.stack(), "forecast": forecast.stack(), "error": error.stack()})
@@ -46,17 +46,17 @@ def evaluate_all(df, years = 3):
         results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
     return pd.DataFrame(results)
 
-def week_all(df):
+def week_all(df, years = 3):
     tables = []
     for col in SERIES:
-        table = weekly_detail(df, col).drop(columns = "date").add_prefix(col + "_")
+        table = weekly_detail(df, col, years).drop(columns = "date").add_prefix(col + "_")
         tables.append(table)
-    dates = weekly_detail(df, SERIES[0])[["date"]]
+    dates = weekly_detail(df, SERIES[0], years)[["date"]]
     return pd.concat([dates] + tables, axis = 1)
 
-def export_results(df, path):
-    summary_sheet = evaluate_all(df)
-    weekly_sheet = week_all(df)
+def export_results(df, path, years = 3):
+    summary_sheet = evaluate_all(df, years)
+    weekly_sheet = week_all(df, years)
     with pd.ExcelWriter(path) as writer:
         summary_sheet.to_excel(writer, sheet_name = "summary", index = False)
         weekly_sheet.to_excel(writer, sheet_name = "weekly")
@@ -92,5 +92,7 @@ if __name__ == "__main__":
     print(wa.shape)
     print(wa.columns.tolist())
 
-    error.to_excel("error_kc_pct.xlsx")
-    export_results(df, "corn_basis_forecast_3yr_20261001.xlsx")
+    error.to_excel("output/error_kc_pct.xlsx")
+    stamp = pd.Timestamp.today().strftime("%Y%m%d")
+    for years in [3,4]:
+        export_results(df,f"output/corn_basis_forecast_{years}yr_{stamp}.xlsx", years)
