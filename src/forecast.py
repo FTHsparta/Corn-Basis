@@ -66,7 +66,12 @@ def week_all(df, years = 3):
     all_markets = all_markets.dropna(how = "all")
 
 
-    return pd.concat([dates] + [all_markets] + tables, axis = 1)
+    results = pd.concat([dates] + [all_markets] + tables, axis = 1)
+    for market in MARKET:
+        results[f"{market}_basis_pct_error_cents"] = results[f"{market}_basis_pct_error"] * results["nearby"]
+
+    return results
+
 
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
@@ -113,5 +118,8 @@ if __name__ == "__main__":
 
     print(wa.shape)
     print(wa.loc[(2026, 36), ["nearby", "garden_city"]])
-    print(wa["date"].isna().sum())
+    #print(wa["date"].isna().sum())
+    print(wa.loc[(2009,1), "garden_city_basis_pct_error_cents"])
+    print(wa.loc[((2026, 36), "garden_city_basis_pct_error_cents")])
+    
 
