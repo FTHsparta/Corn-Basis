@@ -2,6 +2,7 @@ from basis import build_dataset
 import numpy as np
 import pandas as pd
 
+MARKET = ["kansas_city", "dodge_city", "garden_city"]
 SERIES = ["kansas_city_basis", "dodge_city_basis", "garden_city_basis", "kansas_city_basis_pct", "dodge_city_basis_pct","garden_city_basis_pct"]
 
 def make_grid(df, col): #creates a dataset named grid that has one row per isoyear and one column per isoweek
@@ -52,7 +53,20 @@ def week_all(df, years = 3):
         table = weekly_detail(df, col, years).drop(columns = "date").add_prefix(col + "_")
         tables.append(table)
     dates = weekly_detail(df, SERIES[0], years)[["date"]]
-    return pd.concat([dates] + tables, axis = 1)
+
+    
+
+    prices = {"nearby": make_grid(df, "nearby")}
+    for col in MARKET: 
+        prices[col] = make_grid(df, col)
+
+    
+    all_markets = pd.concat(prices, axis = 1).stack()
+    all_markets = all_markets.loc[2009:]
+    all_markets = all_markets.dropna(how = "all")
+
+
+    return pd.concat([dates] + [all_markets] + tables, axis = 1)
 
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
@@ -64,35 +78,40 @@ def export_results(df, path, years = 3):
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
     grid = make_grid(df, "kansas_city_basis_pct")
-    print(grid.shape)
-    print(grid.loc[2023:2026, 35:37])
+    #print(grid.shape)
+    #print(grid.loc[2023:2026, 35:37])
 
     forecast = rolling_forecast(grid)
-    print(forecast.shape)
-    print(forecast.loc[2024:2026, 35:37])
-    print(forecast[53].notna().sum())
+    #print(forecast.shape)
+    #print(forecast.loc[2024:2026, 35:37])
+    #print(forecast[53].notna().sum())
 
     error = forecast_error(grid, forecast)
-    print(error.loc[2024:2026, 35:37])
+    #print(error.loc[2024:2026, 35:37])
 
     n, me, mae, rmse = summary(error)
-    print(n, me, mae, rmse)
+    #print(n, me, mae, rmse)
 
-    print(evaluate_all(df, 3))
-    print(evaluate_all(df, 4))
+    #print(evaluate_all(df, 3))
+    #(evaluate_all(df, 4))
 
     forecast4 = rolling_forecast(grid, 4)
-    print(grid.loc[2022:2025, 36], forecast4.loc[2026,36])
+    #print(grid.loc[2022:2025, 36], forecast4.loc[2026,36])
 
     wd = weekly_detail(df, "kansas_city_basis_pct")
-    print(wd.shape)
-    print(wd.loc[(2026, 36)])
+    #print(wd.shape)
+    #print(wd.loc[(2026, 36)])
 
     wa = week_all(df)
-    print(wa.shape)
-    print(wa.columns.tolist())
+    #print(wa.shape)
+    #print(wa.columns.tolist())
 
     error.to_excel("output/error_kc_pct.xlsx")
     stamp = pd.Timestamp.today().strftime("%Y%m%d")
     for years in [3,4]:
         export_results(df,f"output/corn_basis_forecast_{years}yr_{stamp}.xlsx", years)
+
+    print(wa.shape)
+    print(wa.loc[(2026, 36), ["nearby", "garden_city"]])
+    print(wa["date"].isna().sum())
+
