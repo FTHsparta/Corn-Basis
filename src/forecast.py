@@ -45,6 +45,13 @@ def evaluate_all(df, years = 3):
         error = forecast_error(grid, forecast)
         n, me, mae, rmse = summary(error)
         results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
+        if col.endswith("_pct"):
+            cents_pct_error = error * make_grid(df, "nearby")
+
+            cents_n, cents_mean_error, cents_mae, cents_rmse = summary(cents_pct_error)
+            results.append({"series": f"{col}_cents", "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
+
+
     return pd.DataFrame(results)
 
 def week_all(df, years = 3):
