@@ -70,7 +70,7 @@ if __name__ == "__main__":
     plot_prices(df, "output/prices.png")
     plot_basis(df, "output/basis.png")
     print(df.loc[df["cash_date"] == "2026-09-03", ["kansas_city_basis", "nearby", "kansas_city_basis_pct"]])
-    plot_errors_year(df, 2025, f"output/gc_errors_scatter.png")
+    plot_errors_year(df, 2025, f"output/gc_errors_2025.png")
     plot_errors_scatter(df, f"output/gc_errors_scatter.png")
     ##print(f"{df.loc[df['cash_date'] == '2009-03-12']}")
     ##print(f"{df.loc[df['cash_date'] == '2016-05-19']}")
