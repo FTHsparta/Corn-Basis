@@ -54,6 +54,15 @@ def evaluate_all(df, years = 3):
 
     return pd.DataFrame(results)
 
+def modern_information_forecast(df, horizon, col, weight):
+    detail = weekly_detail(df, col, years = 3)
+    error_table = detail[["date", "error"]]
+    error_table["error"] = error_table["error"].shift(horizon)
+    detail["adjusted_forecast"] = detail["forecast"] - (weight * error_table["error"])
+    detail["adjusted_error"] = detail["adjusted_forecast"] - detail["observed"]
+
+    return detail
+
 def week_all(df, years = 3):
     tables = []
     for col in SERIES:
@@ -129,4 +138,7 @@ if __name__ == "__main__":
     print(wa.loc[(2009,1), "garden_city_basis_pct_error_cents"])
     print(wa.loc[((2026, 36), "garden_city_basis_pct_error_cents")])
     
-
+    modern_information = modern_information_forecast(df, 16, "kansas_city_basis_pct", weight = 0)
+    print(summary(modern_information["adjusted_error"].unstack()))
+    print(modern_information.shape)
+    modern_information.to_excel(f"output/modern_information_forecast_{stamp}.xlsx")
