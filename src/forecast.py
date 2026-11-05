@@ -2,9 +2,11 @@ from basis import build_dataset
 import numpy as np
 import pandas as pd
 
+import basis
+
 MARKET = ["kansas_city", "dodge_city", "garden_city"]
 SERIES = ["kansas_city_basis", "dodge_city_basis", "garden_city_basis", "kansas_city_basis_pct", "dodge_city_basis_pct","garden_city_basis_pct"]
-
+HORIZON = [16, 20, 24]
 def make_grid(df, col): #creates a dataset named grid that has one row per isoyear and one column per isoweek
     df = df.copy()
     df[["iso_year", "iso_week"]] = df["cash_date"].dt.isocalendar()[["year", "week"]].astype(int)
@@ -37,31 +39,47 @@ def weekly_detail(df, col, years = 3):
     detail = detail.dropna(subset=["date"])
     return detail.loc[2009:]
 
-def evaluate_all(df, years = 3):
+def evaluate_all(df, years = 3, weight = 1):
     results = []
     for col in SERIES:
+        market = col.split("_basis")[0] #Grabs the market name from the series name (e.g., "kansas_city" from "kansas_city_basis")
+        if col.endswith("_pct"):
+            basis = "pct_points"
+        else: 
+            basis = "absolute"
         grid = make_grid(df, col)
         forecast = rolling_forecast(grid, years)
         error = forecast_error(grid, forecast)
         n, me, mae, rmse = summary(error)
-        results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
+        results.append({"market":market, "basis": basis, "horizon": "plain", "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
+
+        for horizon in HORIZON: 
+            Taylor_data = modern_information_forecast(df, horizon, col, weight, years)
+            adjusted_error = forecast_error(grid, Taylor_data["adjusted_forecast"].unstack())
+            n, me, mae, rmse = summary(adjusted_error)
+            results.append({"market": market, "basis": basis, "horizon": horizon, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
+
+            if col.endswith("_pct"):
+                adjusted_cents_pct_error = adjusted_error * make_grid(df, "nearby")
+                cents_n, cents_mean_error, cents_mae, cents_rmse = summary(adjusted_cents_pct_error)
+                results.append({"market": market, "basis": "pct_cents", "horizon": horizon, "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
+
         if col.endswith("_pct"):
             cents_pct_error = error * make_grid(df, "nearby")
 
             cents_n, cents_mean_error, cents_mae, cents_rmse = summary(cents_pct_error)
-            results.append({"series": f"{col}_cents", "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
-
+            results.append({"market": market, "basis": "pct_cents", "horizon": "plain", "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
 
     return pd.DataFrame(results)
 
-def modern_information_forecast(df, horizon, col, weight):
-    detail = weekly_detail(df, col, years = 3)
-    error_table = detail[["date", "error"]]
-    error_table["error"] = error_table["error"].shift(horizon)
-    detail["adjusted_forecast"] = detail["forecast"] - (weight * error_table["error"])
-    detail["adjusted_error"] = detail["adjusted_forecast"] - detail["observed"]
+def modern_information_forecast(df, horizon, col, weight, years): #Applies Taylor's modern information forecast to the interpolated data
+    detail = weekly_detail(df, col, years) #Grabs the weekly detail table which has weeks and error (what we want)
+    error_table = detail[["date", "error"]] #Grabs the weeks and errors and puts it into its own table
+    error_table["error"] = error_table["error"].shift(horizon) #Shifts all of the errors by the horizon amount 
+    detail["adjusted_forecast"] = detail["forecast"] - (weight * error_table["error"]) #Uses the formula with the lambda (weight) to calculate the adjusted forecast
+    detail["adjusted_error"] = detail["adjusted_forecast"] - detail["observed"] #Calculates the adjusted error
 
-    return detail
+    return detail #returns the data
 
 def week_all(df, years = 3):
     tables = []
@@ -91,10 +109,14 @@ def week_all(df, years = 3):
 
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
-    weekly_sheet = week_all(df, years)
+    measures = ["n", "mean_error", "mae", "rmse"]
     with pd.ExcelWriter(path) as writer:
-        summary_sheet.to_excel(writer, sheet_name = "summary", index = False)
-        weekly_sheet.to_excel(writer, sheet_name = "weekly")
+        for measure in measures:
+            table = summary_sheet.pivot(index = ["market", "basis"], columns = "horizon", values = measure)
+            table = table[["plain", 16, 20, 24]].round(2) 
+            table.to_excel(writer, sheet_name = measure)
+
+
 
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
@@ -127,18 +149,28 @@ if __name__ == "__main__":
     #print(wa.shape)
     #print(wa.columns.tolist())
 
-    error.to_excel("output/error_kc_pct.xlsx")
+    #error.to_excel("output/error_kc_pct.xlsx")
     stamp = pd.Timestamp.today().strftime("%Y%m%d")
-    for years in [3,4]:
-        export_results(df,f"output/corn_basis_forecast_{years}yr_{stamp}.xlsx", years)
+    #for years in [3,4]:
+        #export_results(df,f"output/corn_basis_forecast_{years}yr_{stamp}.xlsx", years)
 
-    print(wa.shape)
-    print(wa.loc[(2026, 36), ["nearby", "garden_city"]])
+    #print(wa.shape)
+    #print(wa.loc[(2026, 36), ["nearby", "garden_city"]])
     #print(wa["date"].isna().sum())
-    print(wa.loc[(2009,1), "garden_city_basis_pct_error_cents"])
-    print(wa.loc[((2026, 36), "garden_city_basis_pct_error_cents")])
+    #print(wa.loc[(2009,1), "garden_city_basis_pct_error_cents"])
+    #print(wa.loc[((2026, 36), "garden_city_basis_pct_error_cents")])
     
-    modern_information = modern_information_forecast(df, 16, "kansas_city_basis_pct", weight = 0)
-    print(summary(modern_information["adjusted_error"].unstack()))
-    print(modern_information.shape)
-    modern_information.to_excel(f"output/modern_information_forecast_{stamp}.xlsx")
+    #modern_information = modern_information_forecast(df, 16, "garden_city_basis", weight = 1, 3) #Calls the modern information function for garden city
+    #print(summary(modern_information["adjusted_error"].unstack())) #Turns it back int oa grid with years as rows and weeks as columns. Prints the results 
+    #print(modern_information.shape) #prints the shape of the adjusted forecast
+    #modern_information.to_excel(f"output/modern_information_forecast_{stamp}.xlsx") #outputs it to excel
+
+
+
+    #adjusted_results_3year = evaluate_all(df, 3, 1)
+    #adjusted_results_4year = evaluate_all(df, 4, 1)
+    #.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
+    #adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
+
+    export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
+    export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
