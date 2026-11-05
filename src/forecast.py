@@ -109,12 +109,15 @@ def week_all(df, years = 3):
 
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
+    weekly_sheet = week_all(df, years)
     measures = ["n", "mean_error", "mae", "rmse"]
     with pd.ExcelWriter(path) as writer:
         for measure in measures:
             table = summary_sheet.pivot(index = ["market", "basis"], columns = "horizon", values = measure)
             table = table[["plain", 16, 20, 24]].round(2) 
+            table.columns = ["base forecast", "16-week", "20-week", "24-week"]
             table.to_excel(writer, sheet_name = measure)
+        weekly_sheet.to_excel(writer, sheet_name = "weekly_detail")
 
 
 
