@@ -106,6 +106,27 @@ def week_all(df, years = 3):
 
     return results
 
+def optimize_lambda(df, years = 3):
+
+    lambdas = np.linspace(0, 1, 101)
+    results = []
+
+    for col in SERIES:
+        for horizon in HORIZON:
+            errors = []
+            for weight in lambdas:
+                Taylor_data = modern_information_forecast(df, horizon, col, weight = weight, years = years)
+                adjusted_error = Taylor_data["adjusted_error"].dropna()
+                errors.append(adjusted_error.abs().mean())
+            error_series = pd.Series(errors, index = lambdas)
+            results.append({
+                "series": col,
+                "horizon": horizon,
+                "optimal lambda": error_series.idxmin(),
+                "min mae": error_series.min(),
+                "mae at 1": errors[-1]
+            })
+    return pd.DataFrame(results)
 
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
@@ -175,5 +196,12 @@ if __name__ == "__main__":
     #.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
     #adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
 
-    export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
-    export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
+    #export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
+    #export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
+
+
+    optimized_lambda_3yr = optimize_lambda(df, 3)
+    optimized_lambda_3yr.to_excel(f"output/optimized_lambda_3yr_{stamp}.xlsx")
+
+    optimized_lambda_4yr = optimize_lambda(df, 4)
+    optimized_lambda_4yr.to_excel(f"output/optimized_lambda_4yr_{stamp}.xlsx")
