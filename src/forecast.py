@@ -2,17 +2,11 @@ from basis import build_dataset
 import numpy as np
 import pandas as pd
 
-<<<<<<< HEAD
-MARKET = ["kansas_city", "dodge_city", "garden_city"]
-SERIES = ["kansas_city_basis", "dodge_city_basis", "garden_city_basis", "kansas_city_basis_pct", "dodge_city_basis_pct","garden_city_basis_pct"]
-
-=======
 import basis
 
 MARKET = ["kansas_city", "dodge_city", "garden_city"]
 SERIES = ["kansas_city_basis", "dodge_city_basis", "garden_city_basis", "kansas_city_basis_pct", "dodge_city_basis_pct","garden_city_basis_pct"]
 HORIZON = [16, 20, 24]
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
 def make_grid(df, col): #creates a dataset named grid that has one row per isoyear and one column per isoweek
     df = df.copy()
     df[["iso_year", "iso_week"]] = df["cash_date"].dt.isocalendar()[["year", "week"]].astype(int)
@@ -45,11 +39,6 @@ def weekly_detail(df, col, years = 3):
     detail = detail.dropna(subset=["date"])
     return detail.loc[2009:]
 
-<<<<<<< HEAD
-def evaluate_all(df, years = 3):
-    results = []
-    for col in SERIES:
-=======
 def evaluate_all(df, years = 3, weight = 1):
     results = []
     for col in SERIES:
@@ -58,14 +47,10 @@ def evaluate_all(df, years = 3, weight = 1):
             basis = "pct_points"
         else: 
             basis = "absolute"
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
         grid = make_grid(df, col)
         forecast = rolling_forecast(grid, years)
         error = forecast_error(grid, forecast)
         n, me, mae, rmse = summary(error)
-<<<<<<< HEAD
-        results.append({"series": col, "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
-=======
         results.append({"market":market, "basis": basis, "horizon": "plain", "n": n, "mean_error": me, "mae": mae, "rmse": rmse})
 
         for horizon in HORIZON: 
@@ -79,18 +64,10 @@ def evaluate_all(df, years = 3, weight = 1):
                 cents_n, cents_mean_error, cents_mae, cents_rmse = summary(adjusted_cents_pct_error)
                 results.append({"market": market, "basis": "pct_cents", "horizon": horizon, "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
 
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
         if col.endswith("_pct"):
             cents_pct_error = error * make_grid(df, "nearby")
 
             cents_n, cents_mean_error, cents_mae, cents_rmse = summary(cents_pct_error)
-<<<<<<< HEAD
-            results.append({"series": f"{col}_cents", "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
-
-
-    return pd.DataFrame(results)
-
-=======
             results.append({"market": market, "basis": "pct_cents", "horizon": "plain", "n": cents_n, "mean_error": cents_mean_error, "mae": cents_mae, "rmse": cents_rmse})
 
     return pd.DataFrame(results)
@@ -104,7 +81,6 @@ def modern_information_forecast(df, horizon, col, weight, years): #Applies Taylo
 
     return detail #returns the data
 
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
 def week_all(df, years = 3):
     tables = []
     for col in SERIES:
@@ -134,11 +110,6 @@ def week_all(df, years = 3):
 def export_results(df, path, years = 3):
     summary_sheet = evaluate_all(df, years)
     weekly_sheet = week_all(df, years)
-<<<<<<< HEAD
-    with pd.ExcelWriter(path) as writer:
-        summary_sheet.to_excel(writer, sheet_name = "summary", index = False)
-        weekly_sheet.to_excel(writer, sheet_name = "weekly")
-=======
     measures = ["n", "mean_error", "mae", "rmse"]
     with pd.ExcelWriter(path) as writer:
         for measure in measures:
@@ -149,7 +120,6 @@ def export_results(df, path, years = 3):
         weekly_sheet.to_excel(writer, sheet_name = "weekly_detail")
 
 
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
 
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
@@ -182,20 +152,6 @@ if __name__ == "__main__":
     #print(wa.shape)
     #print(wa.columns.tolist())
 
-<<<<<<< HEAD
-    error.to_excel("output/error_kc_pct.xlsx")
-    stamp = pd.Timestamp.today().strftime("%Y%m%d")
-    for years in [3,4]:
-        export_results(df,f"output/corn_basis_forecast_{years}yr_{stamp}.xlsx", years)
-
-    print(wa.shape)
-    print(wa.loc[(2026, 36), ["nearby", "garden_city"]])
-    #print(wa["date"].isna().sum())
-    print(wa.loc[(2009,1), "garden_city_basis_pct_error_cents"])
-    print(wa.loc[((2026, 36), "garden_city_basis_pct_error_cents")])
-    
-
-=======
     #error.to_excel("output/error_kc_pct.xlsx")
     stamp = pd.Timestamp.today().strftime("%Y%m%d")
     #for years in [3,4]:
@@ -221,4 +177,3 @@ if __name__ == "__main__":
 
     export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
     export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
