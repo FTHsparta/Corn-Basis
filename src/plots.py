@@ -1,5 +1,5 @@
 from basis import build_dataset
-from forecast import make_grid, rolling_forecast, forecast_error, optimize_lambda, modern_information_forecast
+from forecast import make_grid, rolling_forecast, forecast_error, optimize_lambda, modern_information_forecast, MARKET
 import pandas as pd, numpy as np, matplotlib.pyplot as plt
 import numpy as np
 
@@ -88,6 +88,26 @@ def lambdas_mae_graph(df, path, years = 3, horizon = 16):
     fig.savefig(path, dpi=300)
     plt.close(fig)
 
+def optimal_vs_horizon(df, path, years = 3):
+    table = optimize_lambda(df, years)
+    fig, ax = plt.subplots(figsize = (10, 5))
+    for series in ["kansas_city_basis", "dodge_city_basis", "garden_city_basis"]:
+        series_table = table[table["series"] == series]
+        ax.plot(series_table["horizon"], series_table["optimal lambda"], marker = "o", label = series.replace("_basis", "").replace("_", " ").title())
+    ax.legend()
+    ax.set_xticks([16, 20, 24])
+    ax.set_ylim(0,1)
+    ax.set_title(f"Optimal Lambda vs. Forecast Horizon for {years}-Year Moving Average in absolute basis")
+    ax.set_xlabel("Forecast Horizon (weeks)")
+    ax.set_ylabel("Optimal Lambda")
+    fig.tight_layout()
+    ax.grid(alpha = .3)
+    fig.savefig(path, dpi = 300)
+    plt.close(fig)
+
+
+
+
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
     #plot_prices(df, "output/prices.png")
@@ -98,3 +118,4 @@ if __name__ == "__main__":
     lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_16.png", years=3, horizon=16)
     lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_20.png", years=3, horizon=20)
     lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_24.png", years = 3, horizon = 24)
+    optimal_vs_horizon(df, f"output/optimal_lambda_vs_horizon_3yrs.png", years = 3)
