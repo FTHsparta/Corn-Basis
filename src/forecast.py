@@ -110,22 +110,42 @@ def optimize_lambda(df, years = 3):
 
     lambdas = np.linspace(0, 1, 101) #creates a list of 101 evenly spaced numbers between 0 and 1, which will be used as weights for the modern information forecast
     results = []
-
+    nearby = make_grid(df, "nearby").stack() #creates a grid of nearby prices for each week and year
     for col in SERIES:
         for horizon in HORIZON:
             errors = []
+            errors_cents = []
             for weight in lambdas:
                 Taylor_data = modern_information_forecast(df, horizon, col, weight = weight, years = years)
                 adjusted_error = Taylor_data["adjusted_error"].dropna() # Drops any missing values in the adjusted error series
+                if col.endswith("_pct"):
+                    cents_error = Taylor_data["adjusted_error"] * nearby # Calculates the adjusted error in cents for percentage basis series
+                    errors_cents.append(cents_error.abs().mean()) # Calculates the mean absolute error for the adjusted error in cents and appends it to the errors_cents list
+                    
                 errors.append(adjusted_error.abs().mean()) # Calculates the mean absolute error for the adjusted error series and appends it to the errors list
             error_series = pd.Series(errors, index = lambdas) # Creates a pandas Series object with the errors list as values and the lambdas list as index. This allows for easy identification of the optimal lambda value that minimizes the mean absolute error.
+
+            if col.endswith("_pct"):
+                cents_series = pd.Series(errors_cents, index = lambdas) # Creates a pandas Series object with the errors_cents list as values and the lambdas list as index. This allows for easy identification of the optimal lambda value that minimizes the mean absolute error in cents.
+                results.append({
+                    "basis": "pct_cents",
+                    "series": col,
+                    "horizon": horizon,
+                    "optimal lambda": cents_series.idxmin(),
+                    "min mae": cents_series.min(),
+                    "mae at 1": errors_cents[-1],
+                    "mae at 0": errors_cents[0]
+                })
             results.append({ #creates a dictionary with the market, series, horizon, optimal lambda, minimum mean absolute error, and mean absolute error at lambda = 1. This dictionary is appended to the results list.
+                "basis": "absolute" if not col.endswith("_pct") else "pct_points",
                 "series": col,
                 "horizon": horizon,
                 "optimal lambda": error_series.idxmin(),
                 "min mae": error_series.min(),
-                "mae at 1": errors[-1]
+                "mae at 1": errors[-1],
+                "mae at 0": errors[0]
             })
+
     return pd.DataFrame(results)
 
 def export_results(df, path, years = 3):
@@ -191,17 +211,17 @@ if __name__ == "__main__":
 
 
 
-    adjusted_results_3year = evaluate_all(df, 3, 1)
-    adjusted_results_4year = evaluate_all(df, 4, 1)
-    adjusted_results_3year.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
-    adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
+    #adjusted_results_3year = evaluate_all(df, 3, 1)
+    #adjusted_results_4year = evaluate_all(df, 4, 1)
+    #adjusted_results_3year.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
+    #adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
 
-    export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
-    export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
+    #export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
+    #export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
 
 
     optimized_lambda_3yr = optimize_lambda(df, 3)
-    optimized_lambda_3yr.to_excel(f"output/optimized_lambda_3yr_{stamp}.xlsx")
+    optimized_lambda_3yr.to_excel(f"output/optimized_lambda_3yr_{stamp}.xlsx", index = False)
 
     optimized_lambda_4yr = optimize_lambda(df, 4)
-    optimized_lambda_4yr.to_excel(f"output/optimized_lambda_4yr_{stamp}.xlsx")
+    optimized_lambda_4yr.to_excel(f"output/optimized_lambda_4yr_{stamp}.xlsx", index = False)

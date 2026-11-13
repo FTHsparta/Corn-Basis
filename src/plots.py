@@ -65,13 +65,13 @@ def plot_errors_scatter(df, path):
     fig.savefig(path, dpi = 200)
     plt.close(fig)
 
-def lambdas_mae_graph(df, path, years = 3):
+def lambdas_mae_graph(df, path, years = 3, horizon = 16):
     fig, ax = plt.subplots(figsize=(10, 5))
     lambdas = np.linspace(0, 1, 101)
     results = []
     for col in ["kansas_city_basis", "dodge_city_basis", "garden_city_basis"]:
         for weight in lambdas:
-            table = modern_information_forecast(df, 16, col, weight, years)
+            table = modern_information_forecast(df, horizon, col, weight, years)
             mae = table["adjusted_error"].abs().mean()
             results.append((col, weight, mae))
 
@@ -79,9 +79,9 @@ def lambdas_mae_graph(df, path, years = 3):
     ax.plot([r[1] for r in results if r[0] == "kansas_city_basis"], [r[2] for r in results if r[0] == "kansas_city_basis"], label="Kansas City")
     ax.plot([r[1] for r in results if r[0] == "dodge_city_basis"], [r[2] for r in results if r[0] == "dodge_city_basis"], label="Dodge City")
     ax.plot([r[1] for r in results if r[0] == "garden_city_basis"], [r[2] for r in results if r[0] == "garden_city_basis"], label="Garden City")
-    ax.set_title(f"Mean absolute error vs. lambda for {years}-year moving average")
+    ax.set_title(f"Mean absolute error vs. lambda for {years}-year moving average with {horizon}-week forecast horizon")
     ax.set_xlabel("Lambda")
-    ax.set_ylabel("Mean Absolute Error")
+    ax.set_ylabel("Mean Absolute Error (cents/bu)")
     ax.legend()
 
     fig.tight_layout()
@@ -95,5 +95,6 @@ if __name__ == "__main__":
     #print(df.loc[df["cash_date"] == "2026-09-03", ["kansas_city_basis", "nearby", "kansas_city_basis_pct"]])
     #plot_errors_year(df, 2025, f"output/gc_errors_2025.png")
     #plot_errors_scatter(df, f"output/gc_errors_scatter.png")
-    lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs.png", years=3)
-    lambdas_mae_graph(df, f"output/optimal_lambda_mae_4yrs.png", years=4)
+    lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_16.png", years=3, horizon=16)
+    lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_20.png", years=3, horizon=20)
+    lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs_24.png", years = 3, horizon = 24)

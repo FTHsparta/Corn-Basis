@@ -64,3 +64,8 @@ def load_merged(cash_path, futures_path):
     assert len(merged) == 1925, f"Expected 1925 merged rows, got {len(merged)}"
     return merged
 
+if __name__ == "__main__":
+    cash_path = "data/raw/Grainpr.xlsx"
+    futures_path = "data/raw/cornfutures.xlsx"
+    merged = load_merged(cash_path, futures_path)
+    merged.to_excel("output/merged_data.xlsx", index=  False)
