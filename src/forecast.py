@@ -108,7 +108,7 @@ def week_all(df, years = 3):
 
 def optimize_lambda(df, years = 3):
 
-    lambdas = np.linspace(0, 1, 101)
+    lambdas = np.linspace(0, 1, 101) #creates a list of 101 evenly spaced numbers between 0 and 1, which will be used as weights for the modern information forecast
     results = []
 
     for col in SERIES:
@@ -116,10 +116,10 @@ def optimize_lambda(df, years = 3):
             errors = []
             for weight in lambdas:
                 Taylor_data = modern_information_forecast(df, horizon, col, weight = weight, years = years)
-                adjusted_error = Taylor_data["adjusted_error"].dropna()
-                errors.append(adjusted_error.abs().mean())
-            error_series = pd.Series(errors, index = lambdas)
-            results.append({
+                adjusted_error = Taylor_data["adjusted_error"].dropna() # Drops any missing values in the adjusted error series
+                errors.append(adjusted_error.abs().mean()) # Calculates the mean absolute error for the adjusted error series and appends it to the errors list
+            error_series = pd.Series(errors, index = lambdas) # Creates a pandas Series object with the errors list as values and the lambdas list as index. This allows for easy identification of the optimal lambda value that minimizes the mean absolute error.
+            results.append({ #creates a dictionary with the market, series, horizon, optimal lambda, minimum mean absolute error, and mean absolute error at lambda = 1. This dictionary is appended to the results list.
                 "series": col,
                 "horizon": horizon,
                 "optimal lambda": error_series.idxmin(),
@@ -191,13 +191,13 @@ if __name__ == "__main__":
 
 
 
-    #adjusted_results_3year = evaluate_all(df, 3, 1)
-    #adjusted_results_4year = evaluate_all(df, 4, 1)
-    #.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
-    #adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
+    adjusted_results_3year = evaluate_all(df, 3, 1)
+    adjusted_results_4year = evaluate_all(df, 4, 1)
+    adjusted_results_3year.to_excel(f"output/adjusted_results_3year_{stamp}.xlsx")
+    adjusted_results_4year.to_excel(f"output/adjusted_results_4year_{stamp}.xlsx")
 
-    #export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
-    #export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
+    export_results(df, f"output/corn_basis_forecast_3yrs_{stamp}.xlsx", years = 3)
+    export_results(df, f"output/corn_basis_forecast_4yrs_{stamp}.xlsx", years = 4)
 
 
     optimized_lambda_3yr = optimize_lambda(df, 3)

@@ -1,5 +1,5 @@
 from basis import build_dataset
-from forecast import make_grid, rolling_forecast, forecast_error
+from forecast import make_grid, rolling_forecast, forecast_error, optimize_lambda, modern_information_forecast
 import pandas as pd, numpy as np, matplotlib.pyplot as plt
 import numpy as np
 
@@ -65,17 +65,35 @@ def plot_errors_scatter(df, path):
     fig.savefig(path, dpi = 200)
     plt.close(fig)
 
+def lambdas_mae_graph(df, path, years = 3):
+    fig, ax = plt.subplots(figsize=(10, 5))
+    lambdas = np.linspace(0, 1, 101)
+    results = []
+    for col in ["kansas_city_basis", "dodge_city_basis", "garden_city_basis"]:
+        for weight in lambdas:
+            table = modern_information_forecast(df, 16, col, weight, years)
+            mae = table["adjusted_error"].abs().mean()
+            results.append((col, weight, mae))
+
+
+    ax.plot([r[1] for r in results if r[0] == "kansas_city_basis"], [r[2] for r in results if r[0] == "kansas_city_basis"], label="Kansas City")
+    ax.plot([r[1] for r in results if r[0] == "dodge_city_basis"], [r[2] for r in results if r[0] == "dodge_city_basis"], label="Dodge City")
+    ax.plot([r[1] for r in results if r[0] == "garden_city_basis"], [r[2] for r in results if r[0] == "garden_city_basis"], label="Garden City")
+    ax.set_title(f"Mean absolute error vs. lambda for {years}-year moving average")
+    ax.set_xlabel("Lambda")
+    ax.set_ylabel("Mean Absolute Error")
+    ax.legend()
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+
 if __name__ == "__main__":
     df = build_dataset("data/raw/Grainpr.xlsx", "data/raw/cornfutures.xlsx")
-    plot_prices(df, "output/prices.png")
-    plot_basis(df, "output/basis.png")
-    print(df.loc[df["cash_date"] == "2026-09-03", ["kansas_city_basis", "nearby", "kansas_city_basis_pct"]])
-    plot_errors_year(df, 2025, f"output/gc_errors_2025.png")
-    plot_errors_scatter(df, f"output/gc_errors_scatter.png")
-    ##print(f"{df.loc[df['cash_date'] == '2009-03-12']}")
-    ##print(f"{df.loc[df['cash_date'] == '2016-05-19']}")
-    ##print(f"{df.loc[df['cash_date'] == '2015-03-05']}")
-    ##print(f"{df.loc[df['cash_date'] == '2011-03-12']}")
-
-    ##cols = ["cash_date", "kansas_city", "dodge_city", "garden_city", "nearby"]
-    ##print(df.loc[df["cash_date"].between("2009-11-26", "2009-12-10"), cols])  
+    #plot_prices(df, "output/prices.png")
+    #plot_basis(df, "output/basis.png")
+    #print(df.loc[df["cash_date"] == "2026-09-03", ["kansas_city_basis", "nearby", "kansas_city_basis_pct"]])
+    #plot_errors_year(df, 2025, f"output/gc_errors_2025.png")
+    #plot_errors_scatter(df, f"output/gc_errors_scatter.png")
+    lambdas_mae_graph(df, f"output/optimal_lambda_mae_3yrs.png", years=3)
+    lambdas_mae_graph(df, f"output/optimal_lambda_mae_4yrs.png", years=4)
