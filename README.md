@@ -1,9 +1,9 @@
 # Kansas Corn Basis Forecasting
 
-<<<<<<< HEAD
+
 Research project for URES 200, mentored by Dr. Brian Coffey in Agribusiness. 
 
-=======
+
 Research project for URES 200 at Kansas State University, mentored by Professor Brian Coffey. I'm testing how well simple moving-average forecasts predict weekly corn basis at three markets: Kansas City, Dodge City and Garden City.
 
 ## Data
@@ -40,4 +40,4 @@ pip install -r requirements.txt
 mkdir output
 python src/forecast.py
 ```
->>>>>>> ebde3c2ec197f838fddd55bb4b59c72df5990f66
+
